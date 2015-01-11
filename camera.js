@@ -97,107 +97,8 @@ function makeAxis(d, s, transform, deps, dirty) {
   }
 }
 
-function makeFrustum(transform, invTransform, deps, dirty) {
-  var lastAccessPlanes    = 0
-  var planes              = dup([6,4])
-  var lastAccessVertices  = 0
-  var vertices            = dup([8,3])
-  
-  function recomputePlanes() {
-    var d = 0
-    for(var i=0; i<deps.length; ++i) {
-      d = Math.max(d, dirty[deps[i]])
-    }
-    if(lastAccessPlanes >= d) {
-      return
-    }
-    var M = transform()
-
-    var p0 = planes[0]
-    p0[0] = M[12] + M[0]
-    p0[1] = M[13] + M[1]
-    p0[2] = M[14] + M[2]
-    p0[3] = M[15] + M[3]
-
-    var p1 = planes[1]
-    p1[0] = M[12] - M[0]
-    p1[1] = M[13] - M[1]
-    p1[2] = M[14] - M[2]
-    p1[3] = M[15] - M[3]
-
-    var p2 = planes[2]
-    p2[0] = M[12] + M[4]
-    p2[1] = M[13] + M[5]
-    p2[2] = M[14] + M[6]
-    p2[3] = M[15] + M[7]
-
-    var p3 = planes[3]
-    p3[0] = M[12] - M[4]
-    p3[1] = M[13] - M[5]
-    p3[2] = M[14] - M[6]
-    p3[3] = M[15] - M[7]
-
-    var p4 = planes[4]
-    p4[0] = M[8]
-    p4[1] = M[9]
-    p4[2] = M[10]
-    p4[3] = M[11]
-
-    var p5 = planes[5]
-    p5[0] = M[12] - M[8]
-    p5[1] = M[13] - M[9]
-    p5[2] = M[14] - M[10]
-    p5[3] = M[15] - M[11]
-  }
-
-  function recomputeVertices() {
-    var d = 0
-    for(var i=0; i<deps.length; ++i) {
-      d = Math.max(d, dirty[deps[i]])
-    }
-    if(lastAccessVertices >= d) {
-      return
-    }
-    var M = invTransform()
-
-    var w = M[12] + M[13] + M[14] + M[15]
-
-    var v0 = vertices[0]
-    var v1 = vertices[1]
-    var v2 = vertices[2]
-    var v3 = vertices[3]
-    var v4 = vertices[4]
-    var v5 = vertices[5]
-    var v6 = vertices[6]
-    var v7 = vertices[7]
-  }
-
-  var result = {}
-  Object.defineProperties(result, {
-    planes: {
-      get: function() {
-        recomputePlanes()
-        return planes
-      },
-      enumerable: true,
-      configurable: true
-    },
-    vertices: {
-      get: function() {
-        recomputeVertices()
-        return vertices
-      },
-      enumerable: true,
-      configurable: true
-    }
-  })
-  return result
-}
-
 function createFrame(getTransform, getPosition, getAxis, frustum) {
-  var result = {
-    frustum: frustum
-  }
+  var result = {}
 
   COORD_SYSTEMS.forEach(function(coords, i) {
     Object.defineProperty(result, 'to' + capitalizeFirst(coords), {
@@ -304,20 +205,11 @@ function createCamera(controller) {
     })
   })
 
-  var frustum = COORD_SYSTEMS.map(function(src, n) {
-    return makeFrustum(
-      getTransform[n][0],
-      getTransform[0][n],
-      MATRICES.slice(0, n),
-      dirty)
-  })
-
   COORD_SYSTEMS.forEach(function(src, i) {
     result[src] = createFrame(
       getTransform[i],
       getPosition[i],
-      getAxis[i],
-      frustum[i])
+      getAxis[i])
   })
 
   //Return the resulting camera object
