@@ -12,19 +12,20 @@ var PROJECTION    = 'projection'
 
 var DATA          = 'data'
 var WORLD         = 'world'
+var CAMERA        = 'camera'
 var CLIP          = 'clip'
 
 var LEFT          = 'left'
 var RIGHT         = 'right'
 var UP            = 'up'
 var DOWN          = 'down'
-var FORWARD       = 'forward'
-var BACKWARD      = 'backward'
+var FORWARD       = 'front'
+var BACKWARD      = 'back'
 
-var POSITION      = 'position'
+var ORIGIN        = 'origin'
 
-var COORD_SYSTEMS = [ DATA,       WORLD,       VIEW,            CLIP ]
-var MATRICES      = [       MODEL,       VIEW,       PROJECTION      ]
+var COORD_SYSTEMS = [ DATA,       WORLD,       CAMERA,            CLIP ]
+var MATRICES      = [       MODEL,       VIEW,         PROJECTION      ]
 var AXES          = [ LEFT, RIGHT, UP, DOWN, FORWARD, BACKWARD ]
 
 function capitalizeFirst(str) {
@@ -95,6 +96,10 @@ function makeAxis(d, s, transform, deps, dirty) {
     }
     return storage
   }
+}
+
+function makeFrustum() {
+
 }
 
 function createFrame(getTransform, getPosition, getAxis, frustum) {
@@ -214,7 +219,17 @@ function createCamera(controller) {
 
   //Return the resulting camera object
   return {
-    setDirty: setDirty,
+    notify: {
+      model: function() {
+        dirty.model = ++counter
+      },
+      view: function() {
+        dirty.view = ++counter
+      },
+      projection: function() {
+        dirty.projection = ++counter
+      }
+    },
     camera: result
   }
 }

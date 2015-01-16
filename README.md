@@ -1,77 +1,42 @@
 **WORK IN PROGRESS**
 
-camera-3d
-=========
-A common interface for 3D cameras.  This module is a caching layer for maintaining coordinate system transformations and computing camera properties like frustum planes or axes from constituent matrices. This modules is an internal base interface.  Actual camera controllers should use this module internally to expose a camera interface.
+3d-camera-core
+==============
+A common interface for 3D cameras.  This module is a caching layer for maintaining coordinate system transformations and computing camera properties like frustum planes or axes from constituent matrices. This modules is an internal base interface.  Actual camera controllers should use this module to expose a camera interface.
 
 ### Notes on coordinates
 
 By convention, we will define 4 different 3 dimensional projective homogeneous coordinate systems:
 
-* **Data coordinates**: Which are the coordinates used by models and 3D data
-* **World coordinates**: Which is a common coordinate system for all objects within the scene
-* **View coordinates**: Which is the coordinate system of the 
+* **Data coordinates**: The coordinates used by models and 3D data
+* **World coordinates**: A common coordinate system for all objects within the scene
+* **Camera coordinates**: The coordinate system in the world where the camera is at the center
 * **Clip coordinates**: The device clip coordinate system
 
-These coordinates are related by a set of three matrices:
+These coordinates are related by a set of three homogeneous 4x4 matrices:
 
 * **Model matrix**: Maps data coordinates to world coordinates
-* **View matrix**: Maps world coordinates to view coordinates
+* **View matrix**: Maps world coordinates to camera coordinates
 * **Projection matrix**: Maps view coordinates to device clip coordinates
 
-The goal of this module is to maintain the relationships between these coordinate systems as matrices and to define a standard interface for renderable objects which need to consume camera information.
+The goal of this module is to maintain the relationships between these coordinate systems as matrices and to define a standard interface for renderable objects which need to consume camera information.  Implementors should take this module and hook up whatever methods they want to compute the model/view/projection matrices, while users can then treat the resulting camera interface as a black box handling the various coordinate system conversions.
 
-## Example
+# User side
 
-### Basic usage
-
-```javascript
-```
-
-### With glslify
-
-This module directly exposes a glslify-compatible interface.  You can assign the camera to a uniform variable
-
-```glsl
-#pragma glslify: Camera = require(camera-3d)
-
-attribute vec3 position, normal;
-
-uniform Camera camera;
-
-varying vec3 fragNormal, fragView;
-
-void main() {
-  //Compute the position in clip coordinates
-  gl_Position = camera.data.toClip * vec4(position, 1);
-
-  //Compute position/orientation in world coordinates
-  vec4 worldPosition = camera.data.toWorld * vec4(position, 1);
-  vec3 worldNormal   = (vec4(normal, 0) * camera.world.toData).xyz;
-  vec3 worldView     = worldPosition - camera.world.position;
-
-  //Compute fragment values
-  fragNormal = normalize(worldNormal);
-  fragView   = normalize(worldView);
-}
-```
-
-### Creating a camera
-
-For users who wish to expose this module
+## User example
 
 ```javascript
+//You should call some other module to create a camera controller
+var myCamera = createCameraType()
+
+//Once you have a camera, then you can access the coordinate conversions directly
+
 ```
 
-## Install
-
-```
-npm install 3d-camera-core
-```
-
-## API
+## User API
 
 The overall goal of this module is to keep track of conversions between a number of different coordinate systems.  Because multiplying and recalculating these conversions is expensive, this module caches this data for future use.  After a camera object has been created, no further memory allocations are performed.
+
 
 ### Coordinate system conversions
 
@@ -84,9 +49,9 @@ The overall goal of this module is to keep track of conversions between a number
 #### `coords.toData`
 
 
-### Position and orientation
+### Origin and axes
 
-#### `coords.position`
+#### `coords.origin`
 
 #### `coords.up`
 
@@ -96,9 +61,33 @@ The overall goal of this module is to keep track of conversions between a number
 
 #### `coords.right`
 
-#### `coords.forward`
+#### `coords.front`
 
 #### `coords.back`
+
+
+### Frustum planes
+
+#### `coords.frustum`
+
+
+# For implementors
+
+## Implementation example
+
+```javascript
+```
+
+## Implementator API
+
+### `var result = createCamera(controller)`
+
+### `notify.model()`
+
+### `notify.view()`
+
+### `notify.projection()`
+
 
 # Legal
 
