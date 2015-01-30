@@ -120,13 +120,13 @@ tape('camera controller', function(t) {
   t.equals(controllers.view.numCalls, 2)
   t.equals(controllers.projection.numCalls, 2)
 
-
   controllers.view.set([
     1, 0, 0, 0,
     0, 1, 0, 0,
     0, 0, 1, 0,
     1, 1, 1, 1])
   fullCheck()
+  t.same(camera.world.origin, [-1,-1,-1])
 
   t.end()
 })

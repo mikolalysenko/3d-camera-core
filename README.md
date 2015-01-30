@@ -66,21 +66,84 @@ The position of the camera in the coordinate system.
 
 # For implementors
 
+A camera implementation should provide one or more "controllers" for each of the model, view and projection matrices.  Each controller is an object with two methods; one which tests if the controller has changed and one which reads out the state of the matrix for the controller.
+
 ## Implementation example
 
 ```javascript
+var createCamera = require('3d-camera-core')
+
+//A simple implementation of a camera controller
+function simpleController() {
+  var data = [1,0,0,0,
+              0,1,0,0,
+              0,0,1,0,
+              0,0,0,1]
+  var isDirty = false
+  return {
+    dirty: function() {
+      return isDirty
+    },
+    get: function(m) {
+      isDirty = false
+      for(var i=0; i<16; ++i) {
+        m[i] = data[i]
+      }
+    },
+    set: function(m) {
+      isDirty = true
+      for(var i=0; i<16; ++i) {
+        data[i] = m[i]
+      }
+    }
+  }
+}
+
+//Create a set of controllers for the camera object
+var controllers = {
+  model: simpleController(),
+  view: simpleController(),
+  projection: simpleController()
+}
+
+//Return camera
+var camera = createCamera(controllers)
 ```
 
 ## Implementor API
 
-Changes in the state of the model, view or projection matrices are implemented using a mixed push/pull API.  If one of the model, view or projection matrices changes, it is up to the implementation to notify the camera
-
 ### Constructor
 
-#### `var result = createCamera(controller)`
+#### `var camera = createCamera(controllers)`
 
-Constructs a camera from the given controller.
+This creates a new camera object with the given controllers.  `controllers` is an object with the following properties:
 
+* `controllers.model` a controller for the model matrix
+* `controllers.view` a controller for view matrix
+* `controllers.projection` a controller for the projection matrix
+
+**Returns** A new camera object
+
+### Controller interface
+
+Each controller is an object which provides two methods:
+
+#### `controller.dirty()`
+This method should test if the state of the controller has changed since the last time `controller.get()` was called.  If it has, then the matrix value will be recomputed.
+
+**Returns** `true` if the camera matrix has changed, otherwise `false`
+
+#### `controller.get(matrix)`
+This retrieves the state of the controller's matrix.  The result should be written into `matrix`
+
+### Methods
+
+#### `camera.setController(matrix, controller)`
+
+Replaces the controller on the camera for `matrix` with `controller`.
+
+* `matrix` is the name of the matrix, which is either `model`, `view` or `projection`
+* `controller` is the new controller for the matrix
 
 # Legal
 

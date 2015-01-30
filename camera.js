@@ -186,7 +186,19 @@ function createCamera(baseControllers) {
     }
   }
 
-  var camera = {}
+  function setController(matrix, controller) {
+    if(!(matrix in controllers)) {
+      return
+    }
+    controllers[matrix] = controller
+    controller.get(storage[matrix])
+    dirty[matrix] = ++counter
+  }
+
+  var camera = {
+    setController: setController
+  }
+
   for(var i=0; i<COORD_SYSTEMS.length; ++i) {
     var frame = {}
     Object.defineProperty(frame, ORIGIN, {
