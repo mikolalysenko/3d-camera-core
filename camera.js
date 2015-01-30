@@ -23,11 +23,11 @@ function capitalizeFirst(str) {
 }
 
 function makeMatrix() {
-  return new Float64Array(16)
+  return [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 }
 
 function makeVector() {
-  return new Float64Array(3)
+  return [0,0,0]
 }
 
 function makeDefaultController() {
@@ -91,9 +91,9 @@ function createCamera(baseControllers) {
       }
       if(dirty[propName] < d) {
         dirty[propName] = d
-        multiply(data, matrices[0], matrices[1])
+        multiply(data, matrices[1], matrices[0])
         for(var i=2; i<dependencies.length; ++i) {
-          multiply(data, data, matrices[2])
+          multiply(data, matrices[2], data)
         }
       }
       return data

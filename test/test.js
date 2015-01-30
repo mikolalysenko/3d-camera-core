@@ -46,7 +46,7 @@ tape('camera controller', function(t) {
              0,0,1,0,
              0,0,0,1]
     for(var i=0; i<expected.length; ++i) {
-      multiply(m, m, controllers[expected[i]].data)
+      multiply(m, controllers[expected[i]].data, m)
     }
     if(inverted) {
       invert(m, m)
@@ -119,6 +119,14 @@ tape('camera controller', function(t) {
   t.equals(controllers.model.numCalls, 2)
   t.equals(controllers.view.numCalls, 2)
   t.equals(controllers.projection.numCalls, 2)
+
+
+  controllers.view.set([
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    1, 1, 1, 1])
+  fullCheck()
 
   t.end()
 })
