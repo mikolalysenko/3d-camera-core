@@ -34,7 +34,7 @@ var myCamera = createCameraType()
 //Once you have a camera, then you can access the coordinate conversions directly
 var dataToClip = myCamera.data.toClip
 
-//You can also access 
+//You can also access the origin of the camera in any coordinate system too
 var eyePosition = myCamera.world.origin
 ```
 
@@ -42,26 +42,29 @@ var eyePosition = myCamera.world.origin
 
 The overall goal of this module is to keep track of conversions between a number of different coordinate systems.  Because multiplying and recalculating these conversions is expensive, this module caches this data for future use.  After a camera object has been created, no further memory allocations are performed.
 
-
 ### Coordinate system conversions
 
-#### `coords.toClip`
+The most basic function of this module is to provide a convenient syntax for getting whatever camera transformations you need.
 
-#### `coords.toView`
+#### `coords.toClip`
+A 4x4 matrix representing the conversion from `coords` into clip coordinates.
+
+#### `coords.toCamera`
+A 4x4 matrix representing the conversion from `coords` into camera coordinates.
 
 #### `coords.toWorld`
+A 4x4 matrix representing the conversion from `coords` into world coordinates
 
 #### `coords.toData`
-
+A 4x4 matrix representing the conversion from `coords` into data coordinates.
 
 ### Origin
 
 #### `coords.origin`
 
+The position of the camera in the coordinate system.
 
 # For implementors
-
-For implementros
 
 ## Implementation example
 
