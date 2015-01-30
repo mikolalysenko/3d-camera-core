@@ -1,0 +1,35 @@
+{
+  "name": "3d-camera-core",
+  "version": "1.0.0",
+  "description": "An interface for 3D cameras",
+  "main": "camera.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "dup": "^1.0.0",
+    "gl-mat4": "^1.0.2"
+  },
+  "devDependencies": {
+    "tape": "^3.5.0"
+  },
+  "scripts": {
+    "test": "tape test/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mikolalysenko/3d-camera-core.git"
+  },
+  "keywords": [
+    "camera",
+    "3d",
+    "webgl",
+    "interface"
+  ],
+  "author": "Mikola Lysenko",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mikolalysenko/3d-camera-core/issues"
+  },
+  "homepage": "https://github.com/mikolalysenko/3d-camera-core"
+}
