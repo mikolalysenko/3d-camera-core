@@ -2,8 +2,6 @@ module.exports = createCamera
 
 var multiply      = require('gl-mat4/multiply')
 var invert        = require('gl-mat4/invert')
-var identity      = require('gl-mat4/identity')
-
 var dup           = require('dup')
 
 var MODEL         = 'model'
@@ -15,221 +13,199 @@ var WORLD         = 'world'
 var CAMERA        = 'camera'
 var CLIP          = 'clip'
 
-var LEFT          = 'left'
-var RIGHT         = 'right'
-var UP            = 'up'
-var DOWN          = 'down'
-var FORWARD       = 'front'
-var BACKWARD      = 'back'
-
 var ORIGIN        = 'origin'
 
 var COORD_SYSTEMS = [ DATA,       WORLD,       CAMERA,            CLIP ]
 var MATRICES      = [       MODEL,       VIEW,         PROJECTION      ]
-var AXES          = [ LEFT, RIGHT, UP, DOWN, FORWARD, BACKWARD ]
 
 function capitalizeFirst(str) {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
-function makeIdentity() {
-  var storage = dup(16)
-  return function() {
-    return storage
-  }
+function makeMatrix() {
+  return new Float64Array(16)
 }
 
-function makeTransform(propName, dependencies, accessors, dirty) {
-  var storage = dup(16)
-  var lastAccess = 0
-  var numDeps = dependencies.length
-  return function() {
-    var d = 0
-    for(var i=0; i<numDeps; ++i) {
-      d = Math.max(d, dirty[dependencies[i]])
-    }
-    if(lastAccess < d) {
-      lastAccess = d
-      multiply(storage, accessors[0](), accessors[1])
-      for(var i=2; i<accessors.length; ++i) {
-        multiply(storage, storage, accessors[i]())
+function makeVector() {
+  return new Float64Array(3)
+}
+
+function makeDefaultController() {
+  return {
+    dirty: function() {
+      return false
+    },
+    get: function(m) {
+      for(var i=0; i<16; ++i) {
+        m[i] = 0.0
+      }
+      for(var i=0; i<4; ++i) {
+        m[i] = 1.0
       }
     }
-    return storage
   }
 }
 
-function makePosition(n, transform, deps, dirty) {
-  var storage = dup(3)
-  var lastAccess = 0
-  return function() {
-    var d = 0
-    for(var i=0; i<deps.length; ++i) {
-      d = Math.max(d, dirty[deps[i]])
+function createCamera(baseControllers) {
+  var baseControllers = baseControllers || {}
+  var controllers = {}
+  var dirty = {}
+  var storage = {}
+  var counter = 1
+
+  MATRICES.forEach(function(m) {
+    controllers[m] = baseControllers[m] || makeDefaultController()
+    storage[m] = makeMatrix()
+    dirty[m] = ++counter
+    controllers[m].get(storage[m])
+  })
+
+  function touch(m) {
+    var c = controllers[m]
+    var s = storage[m]
+    if(c.dirty()) {
+      c.get(s)
+      return dirty[m] = ++counter
+    } else {
+      return dirty[m]
     }
-    if(lastAccess < d) {
-      var mat = transform()
-      var w = mat[15]
-      storage[0] = mat[12] / w
-      storage[1] = mat[13] / w
-      storage[2] = mat[14] / w
-      lastAccess = d
-    }
-    return storage
   }
-}
 
-function makeAxis(d, s, transform, deps, dirty) {
-  var storage = dup(3)
-  var lastAccess = 0
-  return function() {
-    var d = 0
-    for(var i=0; i<deps.length; ++i) {
-      d = Math.max(d, dirty[deps[i]])
+  function makeForwardSimple(propName) {
+    return function() {
+      touch(propName)
+      return storage[propName]
     }
-    if(lastAccess < d) {
-      lastAccess = d
-      var mat = transform()
-      storage[0] = s * mat[4*d]
-      storage[1] = s * mat[4*d+1]
-      storage[2] = s * mat[4*d+2]
-    }
-    return storage
   }
-}
 
-function makeFrustum() {
+  function makeForward(propName, dependencies) {
+    var matrices = dependencies.map(function(m) {
+      return storage[m]
+    })
+    var data = storage[propName] = makeMatrix()
+    dirty[propName] = 0
+    return function() {
+      var d = 0
+      for(var i=0; i<dependencies.length; ++i) {
+        d = Math.max(d, touch(dependencies[i]))
+      }
+      if(dirty[propName] < d) {
+        dirty[propName] = d
+        multiply(data, matrices[0], matrices[1])
+        for(var i=2; i<dependencies.length; ++i) {
+          multiply(data, data, matrices[2])
+        }
+      }
+      return data
+    }
+  }
 
-}
+  function makeInverseSimple(propName, dependency) {
+    var data = storage[propName] = makeMatrix()
+    dirty[propName] = 0
+    return function() {
+      var d = touch(dependency)
+      if(dirty[propName] < d) {
+        dirty[propName] = d
+        invert(data, storage[dependency])
+      }
+      return data
+    }
+  }
 
-function createFrame(getTransform, getPosition, getAxis, frustum) {
-  var result = {}
+  function makeInverse(propName, dependency, getDep) {
+    var data = storage[propName] = makeMatrix()
+    dirty[propName] = 0
+    return function() {
+      var dep = getDep()
+      if(dirty[propName] < dirty[dependency]) {
+        dirty[propName] = dirty[dependency]
+        invert(data, dep)
+      }
+      return data
+    }
+  }
 
-  COORD_SYSTEMS.forEach(function(coords, i) {
-    Object.defineProperty(result, 'to' + capitalizeFirst(coords), {
-      get: getTransform[i],
+  function makeOrigin(propName, dependency, getDep) {
+    var data = storage[propName] = makeVector()
+    dirty[propName] = 0
+    return function() {
+      var dep = getDep()
+      if(dirty[propName] < dirty[dependency]) {
+        dirty[propName] = dirty[dependency]
+        var w = dep[15]
+        data[0] = dep[12] / w
+        data[1] = dep[13] / w
+        data[2] = dep[14] / w
+      }
+      return data
+    }
+  }
+
+  function makeIdentity() {
+    var data = makeMatrix(16)
+    for(var i=0; i<16; ++i) {
+      data[i] = 0
+    }
+    for(var i=0; i<4; ++i) {
+      data[5*i] = 1
+    }
+    return function() {
+      return data
+    }
+  }
+
+  var transforms = dup([4,4], null)
+  for(var i=0; i<4; ++i) {
+    transforms[i][i] = makeIdentity()
+    var deps = []
+    for(var j=i+1; j<4; ++j) {
+      deps.push(MATRICES[j-1])
+      if(deps.length === 1) {
+        transforms[i][j] = makeForwardSimple(deps[0])
+      } else {
+        transforms[i][j] = makeForward(
+          COORD_SYSTEMS[i] + 'to' + COORD_SYSTEMS[j], 
+          deps.slice())
+      }
+    }
+  }
+
+  for(var i=0; i<4; ++i) {
+    for(var j=0; j<i; ++j) {
+      if(j+1 === i) {
+        transforms[i][j] = makeInverseSimple(
+          COORD_SYSTEMS[i] + 'to' + COORD_SYSTEMS[j],
+          MATRICES[j])
+      } else {
+        transforms[i][j] = makeInverse(
+          COORD_SYSTEMS[i] + 'to' + COORD_SYSTEMS[j], 
+          COORD_SYSTEMS[j] + 'to' + COORD_SYSTEMS[i],
+          transforms[j][i])
+      }
+    }
+  }
+
+  var camera = {}
+  for(var i=0; i<COORD_SYSTEMS.length; ++i) {
+    var frame = {}
+    Object.defineProperty(frame, ORIGIN, {
+      get: makeOrigin(
+              COORD_SYSTEMS[i] + 'origin', 
+              CLIP + 'to' + COORD_SYSTEMS[i],
+              transforms[3][i]),
       enumerable: true,
       configurable: true
     })
-  })
-
-  Object.defineProperty(result, POSITION, {
-    get: getPosition,
-    enumerable: true,
-    configurable: true
-  })
-
-  AXES.forEach(function(axis, i) {
-    Object.defineProperty(result, axis, {
-      get: getAxis
-    })
-  })
-}
-
-function dummyController(matrix) {
-  identity(matrix)
-}
-
-function createCamera(controller) {
-  var result     = {}
-  var dirty      = {}
-  var counter    = 1
-
-  function setDirty(propName) {
-    dirty[propName] = ++counter
+    for(var j=0; j<COORD_SYSTEMS.length; ++j) {
+      Object.defineProperty(frame, 'to' + capitalizeFirst(COORD_SYSTEMS[j]), {
+        get: transforms[i][j],
+        enumerable: true,
+        configurable: true
+      })
+    }
+    camera[COORD_SYSTEMS[i]] = frame
   }
 
-  var getForward = MATRICES.map(function(m) {
-    var getData = controller[m] || dummyController
-    var matrix = dup(16)
-    var lastAccess = 0
-    dirty[m] = ++counter
-    return function() {
-      var d = dirty[m]
-      if(lastAccess < d) {
-        lastAccess = d
-        getData(matrix)
-      }
-      return matrix
-    }
-  })
-
-  var getInverse = MATRICES.map(function(m) {
-    var matrix = dup(16)
-    var lastAccess = 0
-    return function() {
-      var d = dirty[m]
-      if(lastAccess < d) {
-        lastAccess = d
-        invert(matrix, getForward(d))
-      }
-      return matrix
-    }
-  })
-
-  var getTransform = COORD_SYSTEMS.map(function(src, i) {
-    return COORD_SYSTEMS.map(function(dst, j) {
-      var propName = src + 'to' + dst
-      if(i+1 === j) {
-        return getForward[i]
-      } else if(j+1 === i) {
-        return getInverse[j]
-      } else if(i < j) {
-        return makeTransform(
-          propName, 
-          MATRICES.slice(i,j),
-          getForward.slice(i,j),
-          dirty)
-      } else if(i > j) {
-        return makeTransform(
-          propName, 
-          MATRICES.slice(j,i),
-          getInverse.slice(j,i).reverse(),
-          dirty)
-      } else {
-        return makeIdentity()
-      }
-    })
-  })
-
-  var getPosition = COORD_SYSTEMS.map(function(src, n) {
-    return makePosition(n,
-      getTransform[0][n],
-      MATRICES.slice(0, n),
-      dirty)
-  })
-
-  var getAxis = COORD_SYSTEMS.map(function(src, n) {
-    return AXES.map(function(axis, m) {
-      return makeAxis(
-        m>>>1, 
-        (m & 1) ? -1 : 1, 
-        getTransform[0][n], 
-        MATRICES.slice(0, n), 
-        dirty)
-    })
-  })
-
-  COORD_SYSTEMS.forEach(function(src, i) {
-    result[src] = createFrame(
-      getTransform[i],
-      getPosition[i],
-      getAxis[i])
-  })
-
-  //Return the resulting camera object
-  return {
-    notify: {
-      model: function() {
-        dirty.model = ++counter
-      },
-      view: function() {
-        dirty.view = ++counter
-      },
-      projection: function() {
-        dirty.projection = ++counter
-      }
-    },
-    camera: result
-  }
+  return camera
 }

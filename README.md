@@ -2,7 +2,7 @@
 
 3d-camera-core
 ==============
-A common interface for 3D cameras.  This module is a caching layer for maintaining coordinate system transformations and computing camera properties like frustum planes or axes from constituent matrices. This modules is an internal base interface.  Actual camera controllers should use this module to expose a camera interface.
+A common interface for 3D cameras.  This module is a caching layer for maintaining coordinate system transformations and computing camera properties from a set of generating matrices. This module is intended to be used as a common interface and should not be required directly.
 
 ### Notes on coordinates
 
@@ -23,6 +23,8 @@ The goal of this module is to maintain the relationships between these coordinat
 
 # User side
 
+For most users of this module, you only need to worry about the stuff in this section.
+
 ## User example
 
 ```javascript
@@ -30,7 +32,10 @@ The goal of this module is to maintain the relationships between these coordinat
 var myCamera = createCameraType()
 
 //Once you have a camera, then you can access the coordinate conversions directly
+var dataToClip = myCamera.data.toClip
 
+//You can also access 
+var eyePosition = myCamera.world.origin
 ```
 
 ## User API
@@ -49,44 +54,29 @@ The overall goal of this module is to keep track of conversions between a number
 #### `coords.toData`
 
 
-### Origin and axes
+### Origin
 
 #### `coords.origin`
 
-#### `coords.up`
-
-#### `coords.down`
-
-#### `coords.left`
-
-#### `coords.right`
-
-#### `coords.front`
-
-#### `coords.back`
-
-
-### Frustum planes
-
-#### `coords.frustum`
-
 
 # For implementors
+
+For implementros
 
 ## Implementation example
 
 ```javascript
 ```
 
-## Implementator API
+## Implementor API
 
-### `var result = createCamera(controller)`
+Changes in the state of the model, view or projection matrices are implemented using a mixed push/pull API.  If one of the model, view or projection matrices changes, it is up to the implementation to notify the camera
 
-### `notify.model()`
+### Constructor
 
-### `notify.view()`
+#### `var result = createCamera(controller)`
 
-### `notify.projection()`
+Constructs a camera from the given controller.
 
 
 # Legal
